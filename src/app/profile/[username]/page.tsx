@@ -9,6 +9,8 @@ import { extractData, extractItems } from "@/lib/apiUtils";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { useAuth } from "@/hooks/useRedux";
 import { Post, ProfileResponse } from "@/types";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { ErrorBanner } from "@/components/shared/EmptyState";
 
 export default function FriendProfilePage() {
   const router = useRouter();
@@ -33,21 +35,21 @@ export default function FriendProfilePage() {
   }, [mounted, authUser, targetUsername, router]);
 
   // Fetch public profile
-  const { data: profileData } = useQuery({
+  const { data: profileData, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["user", targetUsername, "profile"],
     queryFn: () => usersService.getProfile(targetUsername),
     enabled: mounted && isAuthenticated && !!targetUsername,
   });
 
   // Fetch user's posts
-  const { data: postsData } = useQuery({
+  const { data: postsData, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["user", targetUsername, "posts"],
     queryFn: () => postsService.getUserPosts(targetUsername, 1, 20),
     enabled: mounted && isAuthenticated && activeTab === "gallery",
   });
 
   // Fetch user's liked posts
-  const { data: likedData } = useQuery({
+  const { data: likedData, isLoading: likedLoading, isError: likedError, refetch: refetchLiked } = useQuery({
     queryKey: ["user", targetUsername, "likes"],
     queryFn: () => postsService.getUserLikes(targetUsername, 1, 20),
     enabled: mounted && isAuthenticated && activeTab === "liked",
@@ -66,6 +68,8 @@ export default function FriendProfilePage() {
       queryClient.invalidateQueries({
         queryKey: ["user", targetUsername, "profile"],
       });
+      queryClient.invalidateQueries({ queryKey: ["me", "following"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "profile"] });
     },
   });
 
@@ -80,6 +84,10 @@ export default function FriendProfilePage() {
   const likedPosts = extractItems<Post>(likedData);
   const currentPosts = activeTab === "gallery" ? galleryPosts : likedPosts;
 
+  const isLoadingPosts = activeTab === "gallery" ? postsLoading : likedLoading;
+  const isErrorPosts = activeTab === "gallery" ? postsError : likedError;
+  const handleRetry = activeTab === "gallery" ? refetchPosts : refetchLiked;
+
   const tabs = [
     { key: "gallery", label: "Gallery", icon: <Grid3X3 className="h-4 w-4" /> },
     { key: "liked", label: "Liked", icon: <Heart className="h-4 w-4" /> },
@@ -91,6 +99,14 @@ export default function FriendProfilePage() {
     { label: "Following", value: profile.counts?.following ?? 0 },
     { label: "Likes", value: profile.counts?.likes ?? 0 },
   ];
+
+  if (profileLoading) {
+    return <LoadingSpinner fullPage />;
+  }
+
+  if (profileError) {
+    return <ErrorBanner onRetry={refetchProfile} className="mt-20" />;
+  }
 
   return (
     <>
@@ -140,6 +156,9 @@ export default function FriendProfilePage() {
           emptyLabel={
             activeTab === "gallery" ? "No posts yet" : "No liked posts"
           }
+          isLoading={isLoadingPosts}
+          isError={isErrorPosts}
+          onRetry={handleRetry}
         />
       </main>
     </>

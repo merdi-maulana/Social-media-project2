@@ -17,6 +17,7 @@ import {
 import { postsService } from "@/services";
 import { extractData } from "@/lib/apiUtils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ErrorBanner } from "@/components/shared/EmptyState";
 import { cn, formatDate } from "@/lib/utils";
 import { useAuth } from "@/hooks/useRedux";
 import { Post, Comment } from "@/types";
@@ -53,7 +54,7 @@ export default function PostDetailPage() {
     if (mounted && !isAuthenticated) router.push("/login");
   }, [mounted, isAuthenticated, router]);
 
-  const { data: postData, isLoading } = useQuery({
+  const { data: postData, isLoading, isError, refetch } = useQuery({
     queryKey: ["post", postId],
     queryFn: () => postsService.getPost(postId),
     enabled: mounted && isAuthenticated && !!postId,
@@ -77,6 +78,14 @@ export default function PostDetailPage() {
             <div className="w-full aspect-square bg-neutral-900 rounded-md" />
             <div className="h-3 w-48 bg-neutral-800 rounded" />
           </div>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="max-w-2xl mx-auto px-4 py-12">
+        <ErrorBanner onRetry={() => refetch()} />
       </main>
     );
   }
@@ -161,6 +170,11 @@ function SinglePost({
     mutationFn: () => postsService.deletePost(String(post.id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "posts"] });
+      if (post.author?.username) {
+        queryClient.invalidateQueries({ queryKey: ["user", post.author.username, "posts"] });
+      }
+      
       router.push("/feed");
     },
   });
@@ -232,8 +246,9 @@ function SinglePost({
         <div className="flex items-center gap-1">
           <button
             onClick={handleLike}
+            disabled={likeMutation.isPending}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-xl font-medium text-sm transition-all active:scale-90",
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl font-medium text-sm transition-all active:scale-90 disabled:opacity-50",
               liked
                 ? "text-red-500 bg-red-500/10"
                 : "text-gray-400 hover:text-red-500 hover:bg-red-500/10",
@@ -255,8 +270,9 @@ function SinglePost({
         </div>
         <button
           onClick={handleSave}
+          disabled={saveMutation.isPending}
           className={cn(
-            "p-2 rounded-xl transition-all active:scale-90",
+            "p-2 rounded-xl transition-all active:scale-90 disabled:opacity-50",
             saved
               ? "text-white bg-white/10"
               : "text-gray-400 hover:text-white hover:bg-white/5",

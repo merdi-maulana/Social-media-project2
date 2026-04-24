@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { usersService } from "@/services";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { EmptyState, ErrorBanner } from "@/components/shared/EmptyState";
 
 interface SearchUser {
   id: number | string;
@@ -23,6 +24,7 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   // Auto-focus input
   useEffect(() => {
@@ -43,8 +45,10 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
         // API shape: { data: { users: [...] } } or { data: [...] }
         const users = res?.data?.users ?? res?.data ?? res?.users ?? [];
         setResults(Array.isArray(users) ? users : []);
+        setError(false);
       } catch {
         setResults([]);
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -97,10 +101,12 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
           </div>
         )}
 
-        {!loading && results.length === 0 && query.trim() && (
-          <p className="text-center text-gray-500 py-8 text-sm">
-            No users found
-          </p>
+        {error && !loading && (
+          <ErrorBanner onRetry={() => setQuery(query)} className="mt-8" />
+        )}
+
+        {!loading && !error && results.length === 0 && query.trim() && (
+          <EmptyState title="No users found" description="Try a different username" />
         )}
 
         {results.map((user) => (

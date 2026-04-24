@@ -82,6 +82,10 @@ export default function CreatePostPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       queryClient.invalidateQueries({ queryKey: ["me", "posts"] });
+      const token = localStorage.getItem("sociality_token");
+      if (!token) {
+        router.push("/login");
+      }
       setToast("Success Post");
       // Reset form
       setImageFile(null);

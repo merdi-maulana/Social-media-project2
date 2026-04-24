@@ -8,6 +8,7 @@ import { Post, LikeUser } from "@/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { X, CheckCircle2 } from "lucide-react";
+import { EmptyState, ErrorBanner } from "@/components/shared/EmptyState";
 
 interface LikesModalProps {
   post: Post;
@@ -23,7 +24,7 @@ export function LikesModal({ post, onClose }: LikesModalProps) {
     };
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["likes", post.id],
     queryFn: () => postsService.getLikes(String(post.id)),
   });
@@ -80,23 +81,26 @@ export function LikesModal({ post, onClose }: LikesModalProps) {
             </div>
           )}
 
+          {/* Error State */}
+          {isError && <ErrorBanner onRetry={() => refetch()} />}
+
           {/* Empty state */}
-          {!isLoading && users.length === 0 && (
-            <p className="text-gray-500 text-sm text-center py-8">
-              No likes yet.
-            </p>
+          {!isLoading && !isError && users.length === 0 && (
+            <EmptyState type="likes" />
           )}
 
           {/* User rows */}
-          <div className="space-y-3">
-            {users.map((likeUser) => (
-              <LikeUserRow
-                key={likeUser.id}
-                user={likeUser}
-                postId={String(post.id)}
-              />
-            ))}
-          </div>
+          {!isLoading && !isError && (
+            <div className="space-y-3">
+              {users.map((likeUser) => (
+                <LikeUserRow
+                  key={likeUser.id}
+                  user={likeUser}
+                  postId={String(post.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -124,6 +128,11 @@ function LikeUserRow({ user, postId }: LikeUserRowProps) {
         : usersService.follow(user.username),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["likes", postId] });
+      queryClient.invalidateQueries({ queryKey: ["me", "profile"] });
+      queryClient.invalidateQueries({ queryKey: ["me", "following"] });
+      queryClient.invalidateQueries({
+        queryKey: ["user", user.username, "profile"],
+      });
     },
   });
 

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postsService } from "@/services";
 import { Post } from "@/types";
 import { useAuth } from "@/hooks/useRedux";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Heart, MessageCircle, Send, Bookmark, Trash2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn, formatDate } from "@/lib/utils";
@@ -22,15 +22,23 @@ interface PostCardProps {
 export function PostCard({ post, queryKey }: PostCardProps) {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
 
-  // State dari server – tidak pakai local toggle
-  const liked = post.likedByMe ?? false;
-  const likesCount = post.likeCount ?? 0;
-  const saved = post.savedByMe ?? false;
+  // Optimistic local state synced with server
+  const [liked, setLiked] = useState(post.likedByMe ?? false);
+  const [likesCount, setLikesCount] = useState(post.likeCount ?? 0);
+  const [saved, setSaved] = useState(post.savedByMe ?? false);
   const [showMore, setShowMore] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [likesOpen, setLikesOpen] = useState(false);
+
+  // Sync prop changes
+  useEffect(() => {
+    setLiked(post.likedByMe ?? false);
+    setLikesCount(post.likeCount ?? 0);
+    setSaved(post.savedByMe ?? false);
+  }, [post.likedByMe, post.likeCount, post.savedByMe]);
 
   // ─── Mutations ────────────────────────────────────────────────────────────
 
@@ -40,6 +48,15 @@ export function PostCard({ post, queryKey }: PostCardProps) {
       liked
         ? postsService.unlikePost(String(post.id))
         : postsService.likePost(String(post.id)),
+    onMutate: () => {
+      setLiked((prev) => !prev);
+      setLikesCount((prev) => (liked ? prev - 1 : prev + 1));
+    },
+    onError: () => {
+      // Revert on error
+      setLiked((prev) => !prev);
+      setLikesCount((prev) => (liked ? prev + 1 : prev - 1));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },
@@ -51,6 +68,12 @@ export function PostCard({ post, queryKey }: PostCardProps) {
       saved
         ? postsService.unsavePost(String(post.id))
         : postsService.savePost(String(post.id)),
+    onMutate: () => {
+      setSaved((prev) => !prev);
+    },
+    onError: () => {
+      setSaved((prev) => !prev);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["me", "saved"] });
@@ -69,7 +92,7 @@ export function PostCard({ post, queryKey }: PostCardProps) {
 
   const handleLike = () => {
     if (!isAuthenticated) {
-      router.push("/login");
+      router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
       return;
     }
     if (likeMutation.isPending) return;
@@ -78,7 +101,7 @@ export function PostCard({ post, queryKey }: PostCardProps) {
 
   const handleSave = () => {
     if (!isAuthenticated) {
-      router.push("/login");
+      router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
       return;
     }
     if (saveMutation.isPending) return;
@@ -153,8 +176,9 @@ export function PostCard({ post, queryKey }: PostCardProps) {
             {/* Like */}
             <button
               onClick={handleLike}
+              disabled={likeMutation.isPending}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-xl font-medium text-sm transition-all active:scale-90",
+                "flex items-center gap-1.5 px-3 py-2 rounded-xl font-medium text-sm transition-all active:scale-90 disabled:opacity-50",
                 liked
                   ? "text-red-500 bg-red-500/10"
                   : "text-gray-400 hover:text-red-500 hover:bg-red-500/10",

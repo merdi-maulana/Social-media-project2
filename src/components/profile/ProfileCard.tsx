@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Send, Grid3X3, Bookmark, Heart, Check } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { EmptyState, ErrorBanner } from "@/components/shared/EmptyState";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
@@ -37,6 +39,9 @@ interface ProfileCardProps {
   /** Posts to show in the grid */
   posts: ProfilePost[];
   emptyLabel?: string;
+  isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
 }
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
@@ -56,6 +61,9 @@ export function ProfileCard({
   onTabChange,
   posts,
   emptyLabel = "No posts yet",
+  isLoading = false,
+  isError = false,
+  onRetry,
 }: ProfileCardProps) {
   return (
     <>
@@ -142,7 +150,17 @@ export function ProfileCard({
       </div>
 
       {/* ── Grid / Empty state ── */}
-      {Array.isArray(posts) && posts.length > 0 ? (
+      {isError && (
+        <ErrorBanner onRetry={onRetry} className="mt-8" />
+      )}
+      
+      {isLoading && !isError && (
+        <div className="py-20 flex justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {!isLoading && !isError && Array.isArray(posts) && posts.length > 0 && (
         <div className="grid grid-cols-3 gap-1 mt-2">
           {posts.map((post, idx) => (
             <Link
@@ -170,21 +188,24 @@ export function ProfileCard({
             </Link>
           ))}
         </div>
-      ) : (
-        <div className="py-20 flex flex-col items-center gap-4 text-center">
-          <p className="text-white font-semibold text-base">
-            Your story starts here
-          </p>
-          <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
-            Share your first post and let the world see your moments, passions,
-            and memories. Make this space truly yours.
-          </p>
-          <Link
-            href="/create"
-            className="mt-2 px-8 py-3 rounded-full bg-[#7F51F9] text-white text-sm font-semibold hover:bg-[#6B3EE0] transition-colors"
-          >
-            Upload My First Post
-          </Link>
+      )}
+      
+      {!isLoading && !isError && (!Array.isArray(posts) || posts.length === 0) && (
+        <div className="py-8">
+          {actionType === "edit" ? (
+             <div className="py-20 flex flex-col items-center gap-4 text-center">
+               <p className="text-white font-semibold text-base">Your story starts here</p>
+               <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
+                 Share your first post and let the world see your moments, passions,
+                 and memories. Make this space truly yours.
+               </p>
+               <Link href="/create" className="mt-2 px-8 py-3 rounded-full bg-[#7F51F9] text-white text-sm font-semibold hover:bg-[#6B3EE0] transition-colors">
+                 Upload My First Post
+               </Link>
+             </div>
+          ) : (
+             <EmptyState title={emptyLabel} description=" " />
+          )}
         </div>
       )}
     </>

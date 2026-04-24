@@ -10,11 +10,12 @@ import { EmptyState, ErrorBanner } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Post } from "@/types";
 import { useAuth } from "@/hooks/useRedux";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function FeedPage() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -24,8 +25,10 @@ export default function FeedPage() {
 
   // Redirect to login once mounted and confirmed not authenticated
   useEffect(() => {
-    if (mounted && !isAuthenticated) router.push("/login");
-  }, [mounted, isAuthenticated, router]);
+    if (mounted && !isAuthenticated) {
+      router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
+    }
+  }, [mounted, isAuthenticated, router, pathname]);
 
   const {
     data,
@@ -95,7 +98,7 @@ export default function FeedPage() {
             const isLast = idx === posts.length - 1;
             return (
               <div key={`${post.id}-${idx}`} ref={isLast ? lastRef : undefined}>
-                <PostCard post={post} queryKey={["feed"]} />
+                <PostCard post={post} queryKey={["posts"]} />
               </div>
             );
           })}

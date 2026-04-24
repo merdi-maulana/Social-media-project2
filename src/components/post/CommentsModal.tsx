@@ -9,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { formatDate } from "@/lib/utils";
 import { X, Smile, Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState, ErrorBanner } from "@/components/shared/EmptyState";
 
 const EMOJIS = [
   "😄", "😂", "🥰", "😎", "🙂", "😋",
@@ -68,7 +69,7 @@ export function CommentsModal({
     };
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["comments", id],
     queryFn: () => postsService.getComments(String(id)),
   });
@@ -146,17 +147,20 @@ export function CommentsModal({
           </div>
         )}
 
-        {!isLoading && comments.length === 0 && (
-          <p className="text-gray-500 text-sm text-center py-8">
-            No comments yet. Be the first to comment!
-          </p>
+        {/* Error State */}
+        {isError && <ErrorBanner onRetry={() => refetch()} />}
+
+        {!isLoading && !isError && comments.length === 0 && (
+          <EmptyState type="comments" />
         )}
 
-        <div className="space-y-4">
-          {comments.map((comment) => (
-            <CommentRow key={comment.id} comment={comment} />
-          ))}
-        </div>
+        {!isLoading && !isError && (
+          <div className="space-y-4">
+            {comments.map((comment) => (
+              <CommentRow key={comment.id} comment={comment} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Emoji picker */}
