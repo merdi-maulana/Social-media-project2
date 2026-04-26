@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { PostResponse } from "./type";
 
 /** Accepts both numeric and string post IDs (API returns numbers, paths need strings). */
 type PostId = number | string;
@@ -7,12 +8,12 @@ export const postsService = {
   // ─── Feed & Explore ──────────────────────────────────────────────────────
 
   async getFeed(page = 1, limit = 20) {
-    const res = await api.get("/feed", { params: { page, limit } });
+    const res = await api.get<PostResponse>("/feed", { params: { page, limit } });
     return res.data;
   },
 
   async getPosts(page = 1, limit = 20) {
-    const res = await api.get("/posts", { params: { page, limit } });
+    const res = await api.get<PostResponse>("/posts", { params: { page, limit } });
     return res.data;
   },
 

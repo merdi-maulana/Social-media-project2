@@ -30,6 +30,11 @@ export function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Desktop inline search state
   const [desktopSearchOpen, setDesktopSearchOpen] = useState(false);
@@ -104,7 +109,7 @@ export function Navbar() {
         <div className="md:mx-20 mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <Link
-            href={isAuthenticated ? "/feed" : "/"}
+            href={mounted && isAuthenticated ? "/feed" : "/"}
             className="flex items-center gap-2"
           >
             <Image src={logo} alt="Logo" width={22} height={22} />
@@ -215,7 +220,9 @@ export function Navbar() {
               <Search className="h-5 w-5" />
             </button>
 
-            {isAuthenticated ? (
+            {!mounted ? (
+              <div className="w-9 h-9" />
+            ) : isAuthenticated ? (
               /* Logged-in: avatar with dropdown */
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -279,7 +286,7 @@ export function Navbar() {
         </div>
 
         {/* Guest dropdown menu */}
-        {!isAuthenticated && menuOpen && (
+        {mounted && !isAuthenticated && menuOpen && (
           <div className="max-w-xl mx-auto px-4 pb-4 flex items-center gap-3">
             <Link
               href="/login"

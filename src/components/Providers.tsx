@@ -11,6 +11,7 @@ function AuthListener() {
   useEffect(() => {
     const handler = () => {
       store.dispatch(logout());
+      window.location.href = "/login";
     };
     window.addEventListener("sociality:logout", handler);
     return () => window.removeEventListener("sociality:logout", handler);

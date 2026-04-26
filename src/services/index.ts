@@ -6,5 +6,5 @@
  * import { authService, postsService, usersService } from "@/services";
  */
 export { authService } from "./authServices";
-export { postsService } from "./postServices";
-export { usersService } from "./usersServices";
+export { postsService } from "../app/feed/api";
+export { usersService } from "../app/profile/api";
