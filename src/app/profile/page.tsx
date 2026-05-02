@@ -17,7 +17,10 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("gallery");
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (mounted && !isAuthenticated) router.push("/login");
   }, [mounted, isAuthenticated, router]);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useRedux";
-import type { Post } from "@/types";
+import type { Post, Comment } from "@/types";
 import { postDetailApi } from "./api";
 
 // ─── Post Detail Query ────────────────────────────────────────────────────────
@@ -39,7 +39,77 @@ export function useAddComment(postId: string | number, onSuccess?: () => void) {
   });
 }
 
-// ─── Post Actions (Like / Save / Delete) ─────────────────────────────────────
+// ─── Delete Comment — optimistic remove + counter decrement ──────────────────
+
+export function useDeleteComment(postId: string | number) {
+  const queryClient = useQueryClient();
+  const commentsKey = ["comments", postId];
+  const postKey = ["post", String(postId)];
+
+  return useMutation({
+    mutationFn: (commentId: string) => postDetailApi.deleteComment(commentId),
+
+    onMutate: async (commentId: string) => {
+      await queryClient.cancelQueries({ queryKey: commentsKey });
+      await queryClient.cancelQueries({ queryKey: postKey });
+
+      // Snapshot for rollback
+      const previousComments = queryClient.getQueryData(commentsKey);
+      const previousPost = queryClient.getQueryData(postKey);
+
+      // Optimistically remove comment from list
+      queryClient.setQueryData(commentsKey, (old: unknown) => {
+        if (!old) return old;
+        const normalize = (d: unknown): Comment[] => {
+          if (Array.isArray(d)) return d;
+          const obj = d as any;
+          return (
+            (obj?.data?.items as Comment[]) ??
+            (obj?.data as Comment[]) ??
+            (obj?.items as Comment[]) ??
+            []
+          );
+        };
+        const list = normalize(old);
+        const filtered = list.filter((c) => String(c.id) !== String(commentId));
+        // Preserve original shape
+        if (Array.isArray(old)) return filtered;
+        const obj = old as any;
+        if (obj?.data?.items) return { ...obj, data: { ...obj.data, items: filtered } };
+        if (obj?.data) return { ...obj, data: filtered };
+        return { ...obj, items: filtered };
+      });
+
+      // Optimistically decrement commentCount on post
+      queryClient.setQueryData(postKey, (old: unknown) => {
+        if (!old) return old;
+        const obj = old as Record<string, unknown>;
+        const post = (obj?.data ?? old) as Post & { data?: Post };
+        if (obj?.data) {
+          return {
+            ...obj,
+            data: { ...post, commentCount: Math.max(0, (post.commentCount ?? 1) - 1) },
+          };
+        }
+        return { ...obj, commentCount: Math.max(0, ((obj.commentCount as number) ?? 1) - 1) };
+      });
+
+      return { previousComments, previousPost };
+    },
+
+    onError: (_err, _vars, context) => {
+      if (context?.previousComments) queryClient.setQueryData(commentsKey, context.previousComments);
+      if (context?.previousPost) queryClient.setQueryData(postKey, context.previousPost);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: commentsKey });
+      queryClient.invalidateQueries({ queryKey: postKey });
+    },
+  });
+}
+
+// ─── Post Actions (Like / Save / Delete Post) ─────────────────────────────────
 
 export function usePostActions(post: Post) {
   const router = useRouter();

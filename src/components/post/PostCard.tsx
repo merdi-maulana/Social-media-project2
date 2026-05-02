@@ -218,7 +218,8 @@ export function PostCard({ post, queryKey }: PostCardProps) {
                 ? "text-yellow-400 bg-yellow-400/10"
                 : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10",
             )}
-            aria-label="Save post"
+            aria-label={saved ? "Unsave post" : "Save post"}
+            data-saved={saved ? "true" : "false"}
           >
             <Bookmark className={cn("h-4 w-4", saved && "fill-yellow-400")} />
           </button>

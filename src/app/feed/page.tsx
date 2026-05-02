@@ -28,7 +28,8 @@ export default function FeedPage() {
   } = useInfinitePosts(mounted && isAuthenticated);
 
   useEffect(() => {
-    setMounted(true);
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   // Redirect to login once mounted and confirmed not authenticated

@@ -40,6 +40,7 @@ export default function LoginPage() {
           <input
             {...register("email")}
             type="email"
+            data-testid="login-email"
             placeholder="Enter your email"
             autoComplete="email"
             className="w-full h-12 px-4 rounded-xl text-sm text-white placeholder-gray-500 outline-none transition-all duration-200 border border-white/10 bg-white/[0.07] hover:border-white/25 focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/30"
@@ -56,6 +57,7 @@ export default function LoginPage() {
             <input
               {...register("password")}
               type={showPass ? "text" : "password"}
+              data-testid="login-password"
               placeholder="Enter your password"
               autoComplete="current-password"
               className="w-full h-12 px-4 pr-12 rounded-xl text-sm text-white placeholder-gray-500 outline-none transition-all duration-200 border border-white/10 bg-white/[0.07] hover:border-white/25 focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/30"
@@ -83,6 +85,7 @@ export default function LoginPage() {
 
         <button
           type="submit"
+          data-testid="login-submit"
           disabled={mutation.isPending}
           className="w-full h-11 bg-primary-300 rounded-full text-white font-semibold text-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
         >

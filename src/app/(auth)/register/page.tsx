@@ -97,7 +97,7 @@ export default function RegisterPage() {
               {showConfirm ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
             </button>
           </div>
-          {errors.confirmPassword && <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
+          {errors.confirmPassword && <p data-testid="error-confirmPassword" role="alert" className="text-xs text-red-400">{errors.confirmPassword.message}</p>}
         </div>
 
         {/* API Error */}

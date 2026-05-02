@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -25,6 +25,10 @@ const sfProDisplay = localFont({
   variable: "--font-sf-pro",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#000000",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "Sociality",
@@ -48,7 +52,6 @@ export const metadata: Metadata = {
     description:
       "Share your moments, connect with friends, and discover inspiring content.",
   },
-  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -57,9 +60,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={sfProDisplay.variable}>
+    <html lang="en" className={sfProDisplay.variable} suppressHydrationWarning>
       <body
         className={`${sfProDisplay.className} antialiased bg-black text-white min-h-screen`}
+        suppressHydrationWarning
       >
         <Providers>
           <AppShell>{children}</AppShell>

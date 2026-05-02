@@ -13,7 +13,7 @@ import { ErrorBanner } from "@/components/shared/EmptyState";
 import { cn, formatDate } from "@/lib/utils";
 import { useAuth } from "@/hooks/useRedux";
 import type { Post, Comment } from "@/types";
-import { usePostDetail, usePostActions, useComments, useAddComment } from "./hook";
+import { usePostDetail, usePostActions, useComments, useAddComment, useDeleteComment } from "./hook";
 
 const EMOJIS = ["😄","😂","🥰","😎","🙂","😋","🤩","😜","🤗","😘","😡","🥲","😤","😭","😏"];
 
@@ -27,7 +27,10 @@ export default function PostDetailPage() {
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const postId = params.id as string;
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (mounted && !isAuthenticated) router.push("/login");
   }, [mounted, isAuthenticated, router]);
@@ -191,6 +194,7 @@ function DesktopCommentModal({ post, onClose }: { post: Post; onClose: () => voi
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -198,6 +202,7 @@ function DesktopCommentModal({ post, onClose }: { post: Post; onClose: () => voi
   }, []);
 
   const { data, isLoading } = useComments(post.id);
+  const deleteCommentMutation = useDeleteComment(post.id);
   const addCommentMutation = useAddComment(post.id, () => {
     setText("");
     setShowEmoji(false);
@@ -277,8 +282,17 @@ function DesktopCommentModal({ post, onClose }: { post: Post; onClose: () => voi
                 const cName = cAuthor?.name || cAuthor?.username || "User";
                 const cInitials = cName.slice(0, 2).toUpperCase();
                 const body = comment.content ?? comment.text ?? "";
+                const isCommentOwner = !!user && user.username === cAuthor?.username;
+                const isDeleting = deleteCommentMutation.isPending &&
+                  deleteCommentMutation.variables === String(comment.id);
                 return (
-                  <div key={comment.id} className="flex gap-3 border-b border-white/5 pb-4">
+                  <div
+                    key={comment.id}
+                    className={cn(
+                      "flex gap-3 border-b border-white/5 pb-4 transition-opacity",
+                      isDeleting && "opacity-40"
+                    )}
+                  >
                     <Avatar className="h-9 w-9 shrink-0">
                       <AvatarImage src={cAuthor?.avatarUrl} alt={cName} />
                       <AvatarFallback className="text-xs">{cInitials}</AvatarFallback>
@@ -287,6 +301,19 @@ function DesktopCommentModal({ post, onClose }: { post: Post; onClose: () => voi
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-white text-sm font-semibold">{cName}</p>
                         {comment.createdAt && <p className="text-gray-500 text-xs">{formatDate(comment.createdAt)}</p>}
+                        {isCommentOwner && (
+                          <button
+                            onClick={() => {
+                              if (!deleteCommentMutation.isPending)
+                                deleteCommentMutation.mutate(String(comment.id));
+                            }}
+                            disabled={isDeleting}
+                            className="ml-auto p-1 rounded text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-all disabled:cursor-not-allowed"
+                            aria-label="Delete comment"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                       <p className="text-gray-300 text-sm mt-0.5 break-words">{body}</p>
                     </div>

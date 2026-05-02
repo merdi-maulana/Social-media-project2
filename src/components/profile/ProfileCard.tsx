@@ -136,6 +136,7 @@ export function ProfileCard({
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            data-testid={`tab-${tab.key}`}
             onClick={() => onTabChange(tab.key)}
             className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors border-b-2 ${
               activeTab === tab.key

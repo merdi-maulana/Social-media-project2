@@ -20,7 +20,10 @@ export default function FriendProfilePage() {
 
   const targetUsername = params.username as string;
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (mounted && !isAuthenticated) router.push("/login");
   }, [mounted, isAuthenticated, router]);
@@ -44,7 +47,7 @@ export default function FriendProfilePage() {
 
   const profile = (extractData<ProfileResponse>(profileData) || {}) as Partial<ProfileResponse>;
   const isFollowing = profile.isFollowing ?? false;
-  const followMutation = useFollowToggle(targetUsername, isFollowing);
+  const followMutation = useFollowToggle(targetUsername);
 
   if (!mounted || !isAuthenticated) return null;
   if (profileLoading) return <LoadingSpinner fullPage />;
@@ -105,7 +108,10 @@ export default function FriendProfilePage() {
           stats={stats}
           actionType="follow"
           isFollowing={isFollowing}
-          onFollowToggle={() => followMutation.mutate()}
+          onFollowToggle={() => {
+            // Guard: ignore rapid clicks while mutation is in-flight
+            if (!followMutation.isPending) followMutation.mutate(isFollowing);
+          }}
           followLoading={followMutation.isPending}
           tabs={tabs}
           activeTab={activeTab}
