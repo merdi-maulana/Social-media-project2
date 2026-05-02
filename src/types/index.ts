@@ -51,6 +51,11 @@ export interface LikeUser {
 // Post Types
 // =====================
 
+export interface PostResponse {
+  data: Post[];
+  pagination: number;
+}
+
 export interface Post {
   /** API returns numeric IDs; coerced to string where path params need it */
   id: number | string;
