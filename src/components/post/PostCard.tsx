@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { postsService } from "@/services";
 import { Post } from "@/types";
-import { useAuth } from "@/hooks/useRedux";
-import { usePathname, useRouter } from "next/navigation";
 import { Heart, MessageCircle, Send, Bookmark, Trash2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn, formatDate } from "@/lib/utils";
 import { CommentsModal } from "./CommentsModal";
 import { LikesModal } from "./LikesModal";
+import { usePostActions } from "./usePostActions";
 
 interface PostCardProps {
   post: Post;
@@ -20,100 +17,26 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, queryKey }: PostCardProps) {
-  const { isAuthenticated, user } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-  const queryClient = useQueryClient();
-
-  // Optimistic local state synced with server
-  const [liked, setLiked] = useState(post.likedByMe ?? false);
-  const [likesCount, setLikesCount] = useState(post.likeCount ?? 0);
-  const [saved, setSaved] = useState(post.savedByMe ?? false);
   const [showMore, setShowMore] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [likesOpen, setLikesOpen] = useState(false);
 
-  // Sync prop changes
-  useEffect(() => {
-    setLiked(post.likedByMe ?? false);
-    setLikesCount(post.likeCount ?? 0);
-    setSaved(post.savedByMe ?? false);
-  }, [post.likedByMe, post.likeCount, post.savedByMe]);
-
-  // ─── Mutations ────────────────────────────────────────────────────────────
-
-  // Like → POST jika belum liked, DELETE jika sudah liked
-  const likeMutation = useMutation({
-    mutationFn: () =>
-      liked
-        ? postsService.unlikePost(String(post.id))
-        : postsService.likePost(String(post.id)),
-    onMutate: () => {
-      setLiked((prev) => !prev);
-      setLikesCount((prev) => (liked ? prev - 1 : prev + 1));
-    },
-    onError: () => {
-      // Revert on error
-      setLiked((prev) => !prev);
-      setLikesCount((prev) => (liked ? prev + 1 : prev - 1));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-    },
-  });
-
-  // Save → POST jika belum saved, DELETE jika sudah saved
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      saved
-        ? postsService.unsavePost(String(post.id))
-        : postsService.savePost(String(post.id)),
-    onMutate: () => {
-      setSaved((prev) => !prev);
-    },
-    onError: () => {
-      setSaved((prev) => !prev);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ["me", "saved"] });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => postsService.deletePost(String(post.id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ["me", "posts"] });
-    },
-  });
-
-  // ─── Auth-gated handlers ──────────────────────────────────────────────────
-
-  const handleLike = () => {
-    if (!isAuthenticated) {
-      router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
-      return;
-    }
-    if (likeMutation.isPending) return;
-    likeMutation.mutate();
-  };
-
-  const handleSave = () => {
-    if (!isAuthenticated) {
-      router.push(`/login?returnTo=${encodeURIComponent(pathname)}`);
-      return;
-    }
-    if (saveMutation.isPending) return;
-    saveMutation.mutate();
-  };
+  const {
+    liked,
+    likesCount,
+    saved,
+    isOwner,
+    toastMessage,
+    handleLike,
+    handleSave,
+    deleteMutation,
+  } = usePostActions({ post, queryKey });
 
   // ─── Derived values ───────────────────────────────────────────────────────
 
   const author = post.author;
   const displayName = author?.name || author?.username || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
-  const isOwner = !!user && user.username === author?.username;
   const isLong = post.caption?.length > 120;
 
   return (
@@ -176,7 +99,6 @@ export function PostCard({ post, queryKey }: PostCardProps) {
             {/* Like */}
             <button
               onClick={handleLike}
-              disabled={likeMutation.isPending}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2 rounded-xl font-medium text-sm transition-all active:scale-90 disabled:opacity-50",
                 liked
@@ -211,7 +133,6 @@ export function PostCard({ post, queryKey }: PostCardProps) {
           {/* Bookmark */}
           <button
             onClick={handleSave}
-            disabled={saveMutation.isPending}
             className={cn(
               "p-2 rounded-xl transition-all active:scale-90 disabled:opacity-50",
               saved
@@ -221,7 +142,7 @@ export function PostCard({ post, queryKey }: PostCardProps) {
             aria-label={saved ? "Unsave post" : "Save post"}
             data-saved={saved ? "true" : "false"}
           >
-            <Bookmark className={cn("h-4 w-4", saved && "fill-yellow-400")} />
+            <Bookmark className={cn("h-4 w-4", saved && "fill-white")} />
           </button>
         </div>
 
@@ -271,6 +192,22 @@ export function PostCard({ post, queryKey }: PostCardProps) {
       )}
       {likesOpen && (
         <LikesModal post={post} onClose={() => setLikesOpen(false)} />
+      )}
+
+      {/* ── Toast Notification ─────────────────────────────────────────────────── */}
+      {toastMessage && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div
+            className={cn(
+              "px-4 py-2 rounded-full text-sm font-medium shadow-xl border",
+              toastMessage.isError
+                ? "bg-red-500/10 text-red-500 border-red-500/20"
+                : "bg-neutral-900 text-white border-white/10"
+            )}
+          >
+            {toastMessage.text}
+          </div>
+        </div>
       )}
     </>
   );

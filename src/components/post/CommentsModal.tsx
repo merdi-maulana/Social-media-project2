@@ -34,8 +34,8 @@ interface CommentsModalProps {
   savedByMe?: boolean;
   onClose: () => void;
   queryKey: string[];
-  onLike?: () => void;
-  onSave?: () => void;
+  onLike?: (e?: React.MouseEvent) => void;
+  onSave?: (e?: React.MouseEvent) => void;
 }
 
 export function CommentsModal({

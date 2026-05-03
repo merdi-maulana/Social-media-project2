@@ -56,6 +56,7 @@ export default function FeedPage() {
   // API shape: { success, message, data: { posts: [...], pagination: {...} } }
   const posts: Post[] = data?.pages.flatMap((p) => extractItems<Post>(p)) ?? [];
 
+  console.log(posts.map(post => post.likedByMe));
   // Show nothing until mounted to match server render
   if (!mounted) return null;
   if (!isAuthenticated) return null;
